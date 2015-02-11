@@ -1,6 +1,9 @@
 
-#ifndef BASIC_DNA_INCLUDED
-#define BASIC_DNA_INCLUDED
+#ifndef _DNA_DATABASE_H_
+#define _DNA_DATABASE_H_
+
+#include "seed.h"
+#include "locus.h"
 
 #include <vector>
 #include <cstdint>
@@ -11,7 +14,7 @@
 #include <memory>
 #include <cassert>
 
-class basic_dna {
+class dna_database {
   typedef std::vector<uint8_t> storage_t;
   typedef std::vector<uint8_t> aux_buffer_t;
 
@@ -25,16 +28,16 @@ class basic_dna {
   typedef std::pair<std::vector<uint8_t>::const_iterator, std::vector<uint8_t>::const_iterator> aux_result_t;
 
 public:
-  basic_dna() {
+  dna_database() {
   }
 
-  void operator=(basic_dna &rhs) = delete;
-  basic_dna(basic_dna &rhs) = delete;
+  void operator=(dna_database &rhs) = delete;
+  dna_database(dna_database &rhs) = delete;
 
 
   class item {
   public:
-    item(const basic_dna *ptr, uint64_t index) : ptr(ptr), index(index) {
+    item(const dna_database *ptr, uint64_t index) : ptr(ptr), index(index) {
     }
 
     template <class _Fn> void for_each_forward_seed(_Fn fn, int seed_size) const {
@@ -61,15 +64,15 @@ public:
       return ptr->get_phred(tmp, index);
     }
   private:
-    friend class basic_dna;
+    friend class dna_database;
     friend class iterator;
-    const basic_dna *ptr;
+    const dna_database *ptr;
     uint64_t index;
   };
 
   class iterator : public item {
   public:
-    iterator(const basic_dna *ptr, uint64_t index) : item(ptr, index) {
+    iterator(const dna_database *ptr, uint64_t index) : item(ptr, index) {
     }
 
     iterator &operator++() { index++; return *this; }
@@ -199,26 +202,40 @@ public:
     aux_index.push_back(aux.size());
   }
 
+  const uint64_t *get_bp() const { return bp.data(); }
+
 private:
   std::string &get_name(std::string &tmp, uint64_t index) const {
     aux_result_t ar = get_aux_data(index, 'N');
     return tmp.assign(ar.first, ar.second);
   }
 
+  std::string &get_short_name(std::string &tmp, uint64_t index) const {
+    aux_result_t ar = get_aux_data(index, 'N');
+    auto p = ar.first;
+    for (; p != ar.second && *p != ' '; ++p) {
+    }
+    return tmp.assign(ar.first, p);
+  }
+
   std::string &get_dna(std::string &tmp, uint64_t index, bool newlines=false) const {
-    uint64_t begin_offset = bp_index[index];
-    uint64_t end_offset = bp_index[index+1];
-    tmp.resize((end_offset - begin_offset) + (end_offset - begin_offset)/60);
+    locus64_t begin_offset = bp_index[index];
+    locus64_t end_offset = bp_index[index+1];
+    return get_dna_as_text(tmp, index, begin_offset, end_offset, newlines);
+  }
+
+  std::string &get_dna_as_text(std::string &tmp, uint64_t index, locus64_t begin_offset, locus64_t end_offset, bool newlines=false) const {
+    tmp.resize((end_offset - begin_offset) + (newlines ? (end_offset - begin_offset)/60 : 0));
 
     size_t i = 0;
-    const uint64_t *p = &bp[begin_offset/32];
-    uint64_t offset = begin_offset;
+    uint64_t offset = bp_index[index];
+    const uint64_t *p = &bp[offset/32];
     uint64_t p0 = p[0];
     uint64_t next_newline = newlines ? 60 : ~(uint64_t)0;
 
     aux_result_t ar = get_aux_data(index, 'D');
     if (ar.first != ar.second) {
-      for (auto dp = ar.first; dp != ar.second; ) {
+      for (auto dp = ar.first; dp != ar.second && offset != end_offset.value(); ) {
         char c = *dp++;
         size_t len = 0;
         while (*dp & 0x80) {
@@ -226,23 +243,26 @@ private:
           len <<= 7;
         }
         len |= (*dp++ & 0x7f);
-        uint64_t end_offset = offset + len;
+        uint64_t run_end = std::min(offset + len, end_offset.value());
         if (c) {
-          while (offset < end_offset ) {
+          while (offset < run_end) {
             unsigned sh = (offset&31)*2;
-            uint64_t value = (p0 << sh >> 62) & 3;
-            tmp[i++] = c;
-            if (--next_newline == 0) { next_newline = 60; tmp[i++] = '\n'; }
+            if (offset >= begin_offset.value()) {
+              tmp[i++] = c;
+              if (--next_newline == 0) { next_newline = 60; tmp[i++] = '\n'; }
+            }
             if (++offset % 32 == 0) {
               p0 = *++p;
             }
           }
         } else {
-          while (offset < end_offset ) {
+          while (offset < run_end ) {
             unsigned sh = (offset&31)*2;
-            uint64_t value = (p0 << sh >> 62) & 3;
-            tmp[i++] = "ACGT"[value];
-            if (--next_newline == 0) { next_newline = 60; tmp[i++] = '\n'; }
+            if (offset >= begin_offset.value()) {
+              uint64_t value = (p0 << sh >> 62) & 3;
+              tmp[i++] = "ACGT"[value];
+              if (--next_newline == 0) { next_newline = 60; tmp[i++] = '\n'; }
+            }
             if (++offset % 32 == 0) {
               p0 = *++p;
             }
@@ -250,11 +270,13 @@ private:
         }
       }
     } else {
-      for (uint64_t offset = begin_offset; offset != end_offset; ) {
+      while (offset != end_offset.value() ) {
         unsigned sh = (offset&31)*2;
-        uint64_t value = (p0 << sh >> 62) & 3;
-        tmp[i++] = "ACGT"[value];
-        if (--next_newline == 0) { next_newline = 60; tmp[i++] = '\n'; }
+        if (offset >= begin_offset.value()) {
+          uint64_t value = (p0 << sh >> 62) & 3;
+          tmp[i++] = "ACGT"[value];
+          if (--next_newline == 0) { next_newline = 60; tmp[i++] = '\n'; }
+        }
         if (++offset % 32 == 0) {
           p0 = *++p;
         }
@@ -306,6 +328,7 @@ private:
       const uint8_t *aux_data = aux.data();
       const uint8_t *begin = aux_data + aux_index[index];
       const uint8_t *end = aux_data + aux_index[index+1];
+      // todo: decompress into aux_buffer
       aux_buffer.assign(begin, end);
     }
 
@@ -345,18 +368,26 @@ private:
     }
   }
 
+  size_t find_index(locus64_t locus) const {
+    const uint64_t *b = bp_index.data();
+    const uint64_t *e = b + bp_index.size();
+    const uint64_t *p = std::upper_bound(b, e, locus.value());
+    return p == b ? 0 : p - b - 1;
+  }
+
   mutable aux_buffer_t aux_buffer;
   mutable uint64_t cur_aux = ~(uint64_t)0;
 
   friend class parser;
+  friend class suffix_array;
 };
 
-std::ostream &operator<<(std::ostream &os, const basic_dna &r) {
+std::ostream &operator<<(std::ostream &os, const dna_database &r) {
   return r.dump(os);
 }
 
 class parser {
-  basic_dna *dna;
+  dna_database *dna;
   uint8_t translate[256];
 
   void err(const char *msg) {
@@ -373,7 +404,7 @@ public:
     translate['T'] = 3;
   }
 
-  const char *add_fasta(basic_dna *dna, const char *begin, const char *end, size_t max_chromosomes=~(size_t)0) {
+  const char *add_fasta(dna_database *dna, const char *begin, const char *end, size_t max_chromosomes=~(size_t)0) {
     this->dna = dna;
 
     std::vector<uint8_t> &aux = dna->aux;
@@ -402,7 +433,7 @@ public:
     return p;
   }
 
-  void add_fastq(basic_dna *dna, const char * begin, const char * end) {
+  void add_fastq(dna_database *dna, const char * begin, const char * end) {
     this->dna = dna;
 
     std::vector<uint8_t> &aux = dna->aux;

@@ -1,12 +1,29 @@
 
-#include "../include/dna_seed.h"
-#include "../include/basic_dna.h"
-#include "../include/dna_suffix_array.h"
+#include <cstdint>
+
+struct hex {
+  char str[17];
+
+  template <class _Ty> hex(_Ty n) {
+    uint64_t value = (uint64_t)n << (64 - sizeof(n)*8);
+    for (int i = 0; i != sizeof(n)*2; ++i) {
+      str[i] = "0123456789abcdef"[value >> 60];
+      value <<= 4;
+    }
+    str[sizeof(n)*2] = 0;
+  }
+
+  operator const char *() { return str; }
+};
+
+#include "../include/suffix_array.h"
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
 #include <iostream>
 #include <sstream>
+
+
 
 static std::string &to_dna(std::string &str, uint64_t seed, int seed_size=32) {
   str.resize(seed_size);
@@ -33,7 +50,7 @@ bool test_ref() {
     "ANTAATTATACTGGATTATTTTTAAATGGGCTGTCTAACATTATATTAAAAGG\n"
   ;
 
-  basic_dna dna;
+  dna_database dna;
   parser parser;
   parser.add_fasta(&dna, rt_fa_test, rt_fa_test + sizeof(rt_fa_test)-1);
 
@@ -62,7 +79,23 @@ bool test_ref() {
     );
   }*/
 
-  dna_suffix_array suf(dna, 6);
+  suffix_array suf(dna, 6);
+
+  std::vector<suffix_array::find_result> result;
+  suf.find(result, "TAAGATGTCCTATAATTTCTGTTTGGAATATAAAATCAGCAACTAATATGTATTTTCAAA", 3, 0);
+  for (auto &r : result) {
+    std::cout << r.locus_ << " " << r.errors << " " << r.dna << "\n";
+  }
+
+  suf.find(result, "GAAGATGTCCTATAATTTCTGTTTGGAATATAAAATCAGCAACTAATATGTATTTTCAAA", 3, 0);
+  for (auto &r : result) {
+    std::cout << r.locus_ << " " << r.errors << " " << r.dna << "\n";
+  }
+
+  suf.find(result, "TTT", 1, 0);
+  for (auto &r : result) {
+    std::cout << r.locus_ << " " << r.errors << " " << r.dna << "\n";
+  }
 
   return true;
 }
@@ -131,7 +164,7 @@ bool test_file() {
   mapped_region region(fa_file, read_only, 0, 0);
   char *begin = (char*)region.get_address();
   char *end = begin + region.get_size();
-  basic_dna dna;
+  dna_database dna;
   parser p;
   p.add_fasta(&dna, begin, end);
   return true;
