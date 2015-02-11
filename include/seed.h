@@ -56,9 +56,9 @@ public:
 
   //! Code distance to another seed.
   int distance(const seed &rhs) const {
-    value_type xor = value ^ rhs.value;
-    xor = (xor & 0x5555555555555555) | ((xor >> 1) & 0x5555555555555555);
-    return __popcnt64(xor);
+    value_type x = value_ ^ rhs.value_;
+    x = (x & 0x5555555555555555) | ((x >> 1) & 0x5555555555555555);
+    return __popcnt64(x);
   }
 
 private:

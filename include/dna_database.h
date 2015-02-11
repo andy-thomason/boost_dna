@@ -189,7 +189,7 @@ public:
     }
   }
 
-  uint64_t add_phred(const char *b, const char *e) {
+  void add_phred(const char *b, const char *e) {
     size_t len = e - b;
     aux.push_back((uint8_t)'P');
     push_vlq(aux, len);
@@ -395,7 +395,7 @@ class parser {
 
 public:
   parser() {
-    memset(translate, 4, sizeof(translate));
+    std::fill(std::begin(translate), std::end(translate), 4);
     translate['\r'] = 8;
     translate['\n'] = 8;
     translate['A'] = 0;

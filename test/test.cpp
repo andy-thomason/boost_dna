@@ -5,7 +5,7 @@ struct hex {
   char str[17];
 
   template <class _Ty> hex(_Ty n) {
-    uint64_t value = (uint64_t)n << (64 - sizeof(n)*8);
+    std::uint64_t value = (std::uint64_t)n << (64 - sizeof(n)*8);
     for (int i = 0; i != sizeof(n)*2; ++i) {
       str[i] = "0123456789abcdef"[value >> 60];
       value <<= 4;
@@ -49,6 +49,8 @@ bool test_ref() {
     "TAAGATGTCCTATAATTTCTGTTTGGAATATAAAATCAGCAACTAATATGTATTTTCAAA\n"
     "ANTAATTATACTGGATTATTTTTAAATGGGCTGTCTAACATTATATTAAAAGG\n"
   ;
+
+  std::cout << "1" << std::endl;
 
   dna_database dna;
   parser parser;

@@ -22,7 +22,7 @@ public:
   bool operator==(const locus &rhs) const { return value_ == rhs.value_; }
   bool operator!=(const locus &rhs) const { return value_ != rhs.value_; }
 
-  ptrdiff_t operator-(const locus &rhs) const { return (ptrdiff_t)value_ - (ptrdiff_t)rhs.value_; }
+  int64_t operator-(const locus &rhs) const { return (int64_t)value_ - (int64_t)rhs.value_; }
   locus operator+(int64_t val) const { return locus(value_ + val); }
 
 private:

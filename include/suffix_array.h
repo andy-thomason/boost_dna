@@ -17,7 +17,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
-#include <strstream>
+#include <sstream>
 #include <algorithm>
 #include <numeric>
 
@@ -30,10 +30,12 @@ class suffix_array {
   std::vector<locus32_t> addresses;
 
   template <class _Fn> static void par_for(int limit, _Fn f) {
-    //std::vector<std::thread> threads(std::thread::hardware_concurrency());
-    std::vector<std::thread> threads(1);
+    for (int i = 0; i != limit; ++i) {
+      f(i);
+    }
+    /*std::vector<std::thread> threads(std::thread::hardware_concurrency());
 
-    std::atomic<int> sequence = 0;
+    std::atomic<int> sequence;
     for (auto &t : threads) {
       t = std::thread([&](){
         int seq;
@@ -44,6 +46,7 @@ class suffix_array {
     }
 
     for (auto &t : threads) t.join();
+    */
   }
 
   /*template <class... args_t> void log(std::string &str, args_t... args) {
