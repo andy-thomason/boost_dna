@@ -20,6 +20,7 @@
 #include <sstream>
 #include <algorithm>
 #include <numeric>
+#include <future>
 
 class suffix_array {
   dna_database &dna;
@@ -30,23 +31,25 @@ class suffix_array {
   std::vector<locus32_t> addresses;
 
   template <class _Fn> static void par_for(int limit, _Fn f) {
-    for (int i = 0; i != limit; ++i) {
-      f(i);
-    }
-    /*std::vector<std::thread> threads(std::thread::hardware_concurrency());
+    //for (int i = 0; i != limit; ++i) {
+      //f(i);
+    //}
+    std::vector<std::future<bool>> threads(std::thread::hardware_concurrency());
 
     std::atomic<int> sequence;
     for (auto &t : threads) {
-      t = std::thread([&](){
+      t = std::async([&](){
         int seq;
         while ((seq = sequence++) < limit) {
           f(seq);
         }
+        return true;
       });
     }
 
-    for (auto &t : threads) t.join();
-    */
+    for (auto &t : threads) {
+      t.get();
+    }
   }
 
   /*template <class... args_t> void log(std::string &str, args_t... args) {
@@ -180,6 +183,8 @@ public:
     locus64_t locus_;
     std::string dna;
     int errors;
+    std::string chromosome;
+    int64_t offset;
   };
 
   bool find(std::vector<find_result> &result, const std::string &sequence, int max_distance, int max_results) {
@@ -221,7 +226,11 @@ public:
         }
       }
       if (errors <= max_distance) {
-        result.push_back(find_result{*p, text, errors});
+        size_t index = dna.find_index(*p);
+        locus64_t start = dna.get_dna_start(index);
+        std::string short_name;
+        dna.get_short_name(short_name, index);
+        result.push_back(find_result{*p, text, errors, short_name, *p - start + 1});
         if (max_results && loci.size() > max_results) {
           return false;
         }

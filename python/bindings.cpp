@@ -8,7 +8,7 @@ char const* greet()
 }
 
 
-BOOST_PYTHON_MODULE(python_bin)
+BOOST_PYTHON_MODULE(fred)
 {
     using namespace boost::python;
     def("greet", greet);

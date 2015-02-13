@@ -169,13 +169,21 @@ bool test_file() {
   dna_database dna;
   parser p;
   p.add_fasta(&dna, begin, end);
+
+  suffix_array suf(dna, 6);
+
+  std::vector<suffix_array::find_result> result;
+  suf.find(result, "ATTTGTTTTAT", 0, 0);
+  for (auto &r : result) {
+    std::cout << r.chromosome << " " << r.offset << " " << r.errors << " " << r.dna << "\n";
+  }
   return true;
 }
 
 int main() {
   try {
-    //test_file();
-    test_ref();
+    test_file();
+    //test_ref();
     std::cout << "Passed:\n";
   } catch(std::exception e) {
     std::cout << "Failed: " << e.what() << "\n";

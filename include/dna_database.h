@@ -18,6 +18,8 @@ class dna_database {
   typedef std::vector<uint8_t> storage_t;
   typedef std::vector<uint8_t> aux_buffer_t;
 
+  typedef size_t item_index_t;
+
   std::vector<uint64_t> bp_index;
   std::vector<uint64_t> bp;
   std::vector<uint64_t> aux_index;
@@ -37,7 +39,7 @@ public:
 
   class item {
   public:
-    item(const dna_database *ptr, uint64_t index) : ptr(ptr), index(index) {
+    item(const dna_database *ptr, item_index_t index) : ptr(ptr), index(index) {
     }
 
     template <class _Fn> void for_each_forward_seed(_Fn fn, int seed_size) const {
@@ -67,16 +69,16 @@ public:
     friend class dna_database;
     friend class iterator;
     const dna_database *ptr;
-    uint64_t index;
+    item_index_t index;
   };
 
   class iterator : public item {
   public:
-    iterator(const dna_database *ptr, uint64_t index) : item(ptr, index) {
+    iterator(const dna_database *ptr, item_index_t index) : item(ptr, index) {
     }
 
     iterator &operator++() { index++; return *this; }
-    iterator &operator++(int) { index++; return *this; }
+    iterator &operator++(int) { ++index; return *this; }
     bool operator!=(const iterator &rhs) { return index != rhs.index; }
 
     const item &operator *() const { return *this; }
@@ -205,12 +207,12 @@ public:
   const uint64_t *get_bp() const { return bp.data(); }
 
 private:
-  std::string &get_name(std::string &tmp, uint64_t index) const {
+  std::string &get_name(std::string &tmp, item_index_t index) const {
     aux_result_t ar = get_aux_data(index, 'N');
     return tmp.assign(ar.first, ar.second);
   }
 
-  std::string &get_short_name(std::string &tmp, uint64_t index) const {
+  std::string &get_short_name(std::string &tmp, item_index_t index) const {
     aux_result_t ar = get_aux_data(index, 'N');
     auto p = ar.first;
     for (; p != ar.second && *p != ' '; ++p) {
@@ -218,13 +220,21 @@ private:
     return tmp.assign(ar.first, p);
   }
 
-  std::string &get_dna(std::string &tmp, uint64_t index, bool newlines=false) const {
+  std::string &get_dna(std::string &tmp, item_index_t index, bool newlines=false) const {
     locus64_t begin_offset = bp_index[index];
     locus64_t end_offset = bp_index[index+1];
     return get_dna_as_text(tmp, index, begin_offset, end_offset, newlines);
   }
 
-  std::string &get_dna_as_text(std::string &tmp, uint64_t index, locus64_t begin_offset, locus64_t end_offset, bool newlines=false) const {
+  locus64_t get_dna_start(item_index_t index) const {
+    return bp_index[index];
+  }
+
+  locus64_t get_dna_end(item_index_t index) const {
+    return bp_index[index+1];
+  }
+
+  std::string &get_dna_as_text(std::string &tmp, item_index_t index, locus64_t begin_offset, locus64_t end_offset, bool newlines=false) const {
     tmp.resize((end_offset - begin_offset) + (newlines ? (end_offset - begin_offset)/60 : 0));
 
     size_t i = 0;
@@ -286,19 +296,19 @@ private:
     return tmp;
   }
 
-  std::string &get_phred(std::string &tmp, uint64_t index) const {
+  std::string &get_phred(std::string &tmp, item_index_t index) const {
     aux_result_t ar = get_aux_data(index, 'P');
     tmp.assign(ar.first, ar.second);
     return tmp;
   }
 
-  uint64_t get_size(uint64_t index) const {
+  uint64_t get_size(item_index_t index) const {
     uint64_t begin_offset = bp_index[index];
     uint64_t end_offset = bp_index[index+1];
     return end_offset - begin_offset;
   }
 
-  template <class _Fn> void for_each_forward_seed(_Fn fn, uint64_t index, int seed_size) const {
+  template <class _Fn> void for_each_forward_seed(_Fn fn, item_index_t index, int seed_size) const {
     uint64_t begin_offset = bp_index[index];
     uint64_t end_offset = bp_index[index+1] - seed_size + 1;
 
@@ -322,7 +332,7 @@ private:
   }
 
   // get (compressed) aux data for a section.
-  aux_result_t get_aux_data(uint64_t index, uint16_t key) const {
+  aux_result_t get_aux_data(item_index_t index, uint16_t key) const {
     if (cur_aux != index) {
       cur_aux = index;
       const uint8_t *aux_data = aux.data();
