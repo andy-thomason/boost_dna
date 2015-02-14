@@ -160,20 +160,22 @@ public:
 
 bool test_file() {
   using namespace boost::interprocess;
-  //file_mapping fa_file("C:/projects/test/Homo_sapiens.GRCh38.dna.primary_assembly.fa", read_only);
-  file_mapping fa_file("C:/projects/test/chr21_p1.fa", read_only);
+  file_mapping fa_file("C:/projects/test/Homo_sapiens.GRCh38.dna.primary_assembly.fa", read_only);
 
+  //file_mapping fa_file("C:/projects/test/chr21_p1.fa", read_only);
   mapped_region region(fa_file, read_only, 0, 0);
+
+
   char *begin = (char*)region.get_address();
   char *end = begin + region.get_size();
   dna_database dna;
   parser p;
   p.add_fasta(&dna, begin, end);
 
-  suffix_array suf(dna, 6);
+  suffix_array suf(dna, 24);
 
   std::vector<suffix_array::find_result> result;
-  suf.find(result, "ATTTGTTTTAT", 0, 0);
+  suf.find(result, "GACATCATCCTGTACGCGTC", 1, 0);
   for (auto &r : result) {
     std::cout << r.chromosome << " " << r.offset << " " << r.errors << " " << r.dna << "\n";
   }

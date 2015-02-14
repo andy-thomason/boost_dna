@@ -24,6 +24,7 @@ class dna_database {
   std::vector<uint64_t> bp;
   std::vector<uint64_t> aux_index;
   std::vector<uint8_t> aux;
+
   std::vector<uint8_t> D_data;
   uint64_t offset = 0;
 

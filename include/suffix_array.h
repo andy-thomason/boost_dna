@@ -62,26 +62,20 @@ public:
   suffix_array(dna_database &dna, int lg_index_size) : dna(dna), lg_index_size(lg_index_size) {
     index.resize(((size_t)1 << lg_index_size)+1);
 
-    const int lg_num_seqs = 4;
+    const int lg_num_seqs = 8;
     const int num_seqs = 1 << lg_num_seqs;
     size_t counts[num_seqs];
     std::fill(std::begin(counts), std::end(counts), 0);
 
-    par_for(num_seqs, [&](int seq) {
-      size_t count = 0;
-      int num_values = 0;
-      for (auto p = dna.begin(); p != dna.end(); ++p) {
-        int seed_size = 32;
-        p->for_each_forward_seed(
-          [&](uint64_t offset, uint64_t seed) {
-            if ((seed >> (64-lg_num_seqs)) == seq) {
-              count++;
-            }
-          }, seed_size
-        );
-      }
-      counts[seq] = count;
-    });
+    size_t count = 0;
+    int num_values = 0;
+    for (auto p = dna.begin(); p != dna.end(); ++p) {
+      p->for_each_forward_seed(
+        [&](uint64_t offset, uint64_t seed) {
+          counts[seed >> (64-lg_num_seqs)]++;
+        }, 32
+      );
+    }
 
     const uint64_t *bp = dna.bp.data();
 
