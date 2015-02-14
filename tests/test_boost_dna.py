@@ -29,7 +29,7 @@ def cpp_sa():
     # the path to our index
     index_path = os.path.join(PATH_TO_GENOME, 'index/suffix_array.sa')
     for filename in os.listdir(PATH_TO_GENOME):
-        if filename.endswith('.flat'):  # edit to change to flat files
+        if filename.endswith('chr5.flat'):  # edit to change to flat files
             sequence_uri = os.path.join(PATH_TO_GENOME, filename)
             sequence_file_paths.append(sequence_uri)
 
@@ -62,6 +62,8 @@ def test_simple_case(cpp_sa):
 
     results = suffix_array.find_inexact(cpp_sa, pattern, maxmismatch, limit)
     # Does not filter out "self" hit
+    import pdb; pdb.set_trace()
+    print results
     assert len(results) == 3
 
 if __name__ == '__main__':
