@@ -15,8 +15,9 @@ PATH_TO_GENOME = '/home/rileyd/biodata/genomes/Human/GRCh38'
 
 
 
-@pytest.fixture
-def cpp_sa(request):
+#@pytest.fixture
+#def cpp_sa(request):
+def cpp_sa():
     """
     Construct a new suffix array and let it hang around for the test session
     :param scope:
@@ -28,7 +29,7 @@ def cpp_sa(request):
     # the path to our index
     index_path = os.path.join(PATH_TO_GENOME, 'index/suffix_array.sa')
     for filename in os.listdir(PATH_TO_GENOME):
-        if filename.endswith('.fa'):  # edit to change to flat files
+        if filename.endswith('.flat'):  # edit to change to flat files
             sequence_uri = os.path.join(PATH_TO_GENOME, filename)
             sequence_file_paths.append(sequence_uri)
 
@@ -38,7 +39,7 @@ def cpp_sa(request):
     def clean_up():  # REMOVE THE INDEX EACH RUN
         os.remove(index_path)
 
-    request.addfinalizer(clean_up)
+    #request.addfinalizer(clean_up)
 
     return index_path
 
@@ -63,6 +64,9 @@ def test_simple_case(cpp_sa):
     # Does not filter out "self" hit
     assert len(results) == 3
 
+if __name__ == '__main__':
+    print "Starting test"
+    cpp_sa()
 
 
 
