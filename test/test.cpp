@@ -1,5 +1,6 @@
 
 #include <cstdint>
+#include <fstream>
 
 struct hex {
   char str[17];
@@ -17,6 +18,8 @@ struct hex {
 };
 
 #include "../include/suffix_array.h"
+#include "../include/dna_database.h"
+//#include "../include/file_vector.h"
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
@@ -34,6 +37,7 @@ static std::string &to_dna(std::string &str, uint64_t seed, int seed_size=32) {
   return str;
 }
 
+#if 0
 bool test_ref() {
   static const char rt_fa_test[] =
     ">22 dna:chromosome chromosome:GRCh38:22:1:50818468:1 REF\n"
@@ -52,7 +56,7 @@ bool test_ref() {
 
   std::cout << "1" << std::endl;
 
-  dna_database dna;
+  dna_database<> dna;
   parser parser;
   parser.add_fasta(&dna, rt_fa_test, rt_fa_test + sizeof(rt_fa_test)-1);
 
@@ -81,20 +85,20 @@ bool test_ref() {
     );
   }*/
 
-  suffix_array suf(dna, 6);
+  suffix_array<uint32_t, uint32_t> suf(dna, 6);
 
-  std::vector<suffix_array::find_result> result;
-  suf.find(result, "TAAGATGTCCTATAATTTCTGTTTGGAATATAAAATCAGCAACTAATATGTATTTTCAAA", 3, 0);
+  std::vector<find_result> result;
+  suf.find(dna, result, "TAAGATGTCCTATAATTTCTGTTTGGAATATAAAATCAGCAACTAATATGTATTTTCAAA", 3, 0);
   for (auto &r : result) {
     std::cout << r.locus_ << " " << r.errors << " " << r.dna << "\n";
   }
 
-  suf.find(result, "GAAGATGTCCTATAATTTCTGTTTGGAATATAAAATCAGCAACTAATATGTATTTTCAAA", 3, 0);
+  suf.find(dna, result, "GAAGATGTCCTATAATTTCTGTTTGGAATATAAAATCAGCAACTAATATGTATTTTCAAA", 3, 0);
   for (auto &r : result) {
     std::cout << r.locus_ << " " << r.errors << " " << r.dna << "\n";
   }
 
-  suf.find(result, "TTT", 1, 0);
+  suf.find(dna, result, "TTT", 1, 0);
   for (auto &r : result) {
     std::cout << r.locus_ << " " << r.errors << " " << r.dna << "\n";
   }
@@ -165,26 +169,105 @@ bool test_file() {
   //file_mapping fa_file("C:/projects/test/chr21_p1.fa", read_only);
   mapped_region region(fa_file, read_only, 0, 0);
 
+  char *begin = (char*)region.get_address();
+  char *end = begin + region.get_size();
+  dna_database<> dna;
+  parser p;
+  //p.add_fasta(&dna, begin, end);
+
+  if (0) {
+    std::ofstream wfile("dna.dat", std::ios_base::binary);
+    dna.write(wfile);
+  }
+
+  {
+    std::ifstream rfile("dna.dat", std::ios_base::binary);
+    dna.read(rfile);
+  }
+
+  if (0) {
+    suffix_array<uint32_t, uint32_t> suf;
+    if (0) {
+      suf = suffix_array<uint32_t, uint32_t>(dna, 24);
+      std::ofstream wfile("suf.dat", std::ios_base::binary);
+      suf.write(wfile);
+      return true;
+    }
+    if (0) {
+      std::ifstream rfile("suf.dat", std::ios_base::binary);
+      suf.read(rfile);
+    }
+
+    std::vector<find_result> result;
+    suf.find(dna, result, "GACATCATCCTGTACGCGTC", 1, 0);
+    for (auto &r : result) {
+      std::cout << r.chromosome << " " << r.offset << " " << r.errors << " " << r.dna << "\n";
+    }
+    return true;
+  }
+}
+
+#endif
+
+void make_from_file(const char *input, const char *dna_file, const char *suffix_file) {
+  using namespace boost::interprocess;
+  file_mapping fa_file(input, read_only);
+  mapped_region region(fa_file, read_only, 0, 0);
 
   char *begin = (char*)region.get_address();
   char *end = begin + region.get_size();
-  dna_database dna;
   parser p;
+  typedef std::vector<uint32_t> index_vector_type;
+  typedef std::vector<uint64_t> bp_vector_type;
+  typedef std::vector<uint8_t> aux_vector_type;
+  dna_database<index_vector_type, bp_vector_type, index_vector_type, aux_vector_type> dna;
   p.add_fasta(&dna, begin, end);
 
-  suffix_array suf(dna, 24);
+  dna.write(std::ofstream(dna_file, std::ios_base::binary));
 
-  std::vector<suffix_array::find_result> result;
-  suf.find(result, "GACATCATCCTGTACGCGTC", 1, 0);
-  for (auto &r : result) {
-    std::cout << r.chromosome << " " << r.offset << " " << r.errors << " " << r.dna << "\n";
+  typedef std::vector<uint32_t> index_type;
+  suffix_array<index_type, index_type> suf(dna, 24);
+  suf.write(std::ofstream(suffix_file, std::ios_base::binary));
+}
+
+void test_one(const char *dna_file, const char *suffix_file, const char *sequence) {
+  typedef std::vector<uint32_t> index_vector_type;
+  typedef std::vector<uint64_t> bp_vector_type;
+  typedef std::vector<uint8_t> aux_vector_type;
+  dna_database<index_vector_type, bp_vector_type, index_vector_type, aux_vector_type> dna;
+  dna.read(std::ifstream(dna_file, std::ios_base::binary));
+
+  std::vector<find_result> results;
+  long long t1 = __rdtsc();
+  dna.find(results, sequence, 0, 0);
+  long long t2 = __rdtsc();
+  for (auto &r : results) {
+    std::cout << r << "\n";
   }
-  return true;
+
+  typedef std::vector<uint32_t> index_type;
+  suffix_array<index_type, index_type> suf;
+  suf.read(std::ifstream(suffix_file, std::ios_base::binary));
+  //suf.verify(dna);
+
+  std::cout << t2-t1 << "\n";
+
+  long long t3 = __rdtsc();
+  suf.find(dna, results, sequence, 0, 0);
+  long long t4 = __rdtsc();
+  for (auto &r : results) {
+    std::cout << r << "\n";
+  }
+
+  std::cout << t4-t3 << "\n";
 }
 
 int main() {
   try {
-    test_file();
+    //make_from_file("C:/projects/test/chr21_p1.fa", "chr21.dna", "chr21.suf");
+
+    test_one("chr21.dna", "chr21.suf", "CTCCAAAGAAAT");
+    //test_file();
     //test_ref();
     std::cout << "Passed:\n";
   } catch(std::exception e) {
