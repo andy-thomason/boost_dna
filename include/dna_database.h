@@ -295,12 +295,13 @@ public:
     return bp_index[index+1];
   }
 
-  std::string &get_dna_as_text(std::string &tmp, item_index_t index, locus64_t begin_offset, locus64_t end_offset, bool newlines=false) const {
+  std::string &get_dna_as_text(std::string &tmp, locus64_t begin_offset, locus64_t end_offset, bool newlines=false) const {
     tmp.resize((end_offset - begin_offset) + (newlines ? (end_offset - begin_offset)/60 : 0));
 
     size_t i = 0;
     uint64_t next_newline = newlines ? 60 : ~(uint64_t)0;
 
+    size_t index = find_index(begin_offset);
     aux_result_t ar = get_aux_data(index, 'D');
     if (0 && ar.first != ar.second) {
       uint64_t offset = bp_index[index];

@@ -230,7 +230,7 @@ void make_from_file(const char *input, const char *dna_file, const char *suffix_
   suf.write(std::ofstream(suffix_file, std::ios_base::binary));
 }
 
-void test_one(const char *dna_file, const char *suffix_file, const char *sequence) {
+void test_one(const char *dna_file, const char *suffix_file, const char *sequence, int max_distance) {
   typedef std::vector<uint32_t> index_vector_type;
   typedef std::vector<uint64_t> bp_vector_type;
   typedef std::vector<uint8_t> aux_vector_type;
@@ -239,7 +239,7 @@ void test_one(const char *dna_file, const char *suffix_file, const char *sequenc
 
   std::vector<find_result> results;
   long long t1 = __rdtsc();
-  dna.find(results, sequence, 0, 0);
+  dna.find(results, sequence, max_distance, 0);
   long long t2 = __rdtsc();
   for (auto &r : results) {
     std::cout << r << "\n";
@@ -253,7 +253,7 @@ void test_one(const char *dna_file, const char *suffix_file, const char *sequenc
   std::cout << t2-t1 << "\n";
 
   long long t3 = __rdtsc();
-  suf.find(dna, results, sequence, 0, 0);
+  suf.find(dna, results, sequence, max_distance, 0);
   long long t4 = __rdtsc();
   for (auto &r : results) {
     std::cout << r << "\n";
@@ -266,7 +266,7 @@ int main() {
   try {
     //make_from_file("C:/projects/test/chr21_p1.fa", "chr21.dna", "chr21.suf");
 
-    test_one("chr21.dna", "chr21.suf", "CTCCAAAGAAAT");
+    test_one("chr21.dna", "chr21.suf", "CCAATGCCTAGGGAGATTTCTAGGTCCTCTGTTCCTTGCTGACCTCCAAT", 3);
     //test_file();
     //test_ref();
     std::cout << "Passed:\n";

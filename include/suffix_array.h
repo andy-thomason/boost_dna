@@ -84,7 +84,7 @@ public:
     size_t starts[num_seqs];
     std::partial_sum(std::begin(counts), std::end(counts), starts);
 
-    std::ofstream dbg("dbg.txt");
+    //std::ofstream dbg("dbg.txt");
 
     par_for(num_seqs, [&](int seq) {
       std::cout << "seq=" << hex(seq) << " counts[seq]=" << counts[seq] << "\n";
@@ -257,8 +257,7 @@ public:
     std::string text;
     for (auto p = loci.begin(); p != loci.end(); ) {
       auto q = p + 1;
-      uint64_t index = dna.find_index(*p);
-      dna.get_dna_as_text(text, index, *p, *p + seq_size, false);
+      dna.get_dna_as_text(text, *p, *p + seq_size, false);
       //std::cout << *p << " " << text << "\n";
       int errors = dna_distance(sequence, text);
       if (errors <= max_distance) {
