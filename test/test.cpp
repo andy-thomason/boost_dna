@@ -2,24 +2,8 @@
 #include <cstdint>
 #include <fstream>
 
-struct hex {
-  char str[17];
-
-  template <class _Ty> hex(_Ty n) {
-    std::uint64_t value = (std::uint64_t)n << (64 - sizeof(n)*8);
-    for (int i = 0; i != sizeof(n)*2; ++i) {
-      str[i] = "0123456789abcdef"[value >> 60];
-      value <<= 4;
-    }
-    str[sizeof(n)*2] = 0;
-  }
-
-  operator const char *() { return str; }
-};
-
 #include "../include/suffix_array.h"
 #include "../include/dna_database.h"
-//#include "../include/file_vector.h"
 #include <boost/interprocess/file_mapping.hpp>
 #include <boost/interprocess/mapped_region.hpp>
 
@@ -217,24 +201,17 @@ void make_from_file(const char *input, const char *dna_file, const char *suffix_
   char *begin = (char*)region.get_address();
   char *end = begin + region.get_size();
   parser p;
-  typedef std::vector<uint32_t> index_vector_type;
-  typedef std::vector<uint64_t> bp_vector_type;
-  typedef std::vector<uint8_t> aux_vector_type;
-  dna_database<index_vector_type, bp_vector_type, index_vector_type, aux_vector_type> dna;
+  dna_database_def dna;
   p.add_fasta(&dna, begin, end);
 
   dna.write(std::ofstream(dna_file, std::ios_base::binary));
 
-  typedef std::vector<uint32_t> index_type;
-  suffix_array<index_type, index_type> suf(dna, 24);
+  suffix_array_def suf(dna, 24);
   suf.write(std::ofstream(suffix_file, std::ios_base::binary));
 }
 
 void test_one(const char *dna_file, const char *suffix_file, const char *sequence, int max_distance) {
-  typedef std::vector<uint32_t> index_vector_type;
-  typedef std::vector<uint64_t> bp_vector_type;
-  typedef std::vector<uint8_t> aux_vector_type;
-  dna_database<index_vector_type, bp_vector_type, index_vector_type, aux_vector_type> dna;
+  dna_database_def dna;
   dna.read(std::ifstream(dna_file, std::ios_base::binary));
 
   std::vector<find_result> results;
@@ -245,8 +222,7 @@ void test_one(const char *dna_file, const char *suffix_file, const char *sequenc
     std::cout << r << "\n";
   }
 
-  typedef std::vector<uint32_t> index_type;
-  suffix_array<index_type, index_type> suf;
+  suffix_array_def suf;
   suf.read(std::ifstream(suffix_file, std::ios_base::binary));
   //suf.verify(dna);
 

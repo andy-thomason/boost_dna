@@ -2,6 +2,7 @@
 #ifndef _DNA_DATABASE_H_
 #define _DNA_DATABASE_H_
 
+#include "utils.h"
 #include "seed.h"
 #include "locus.h"
 #include "find_result.h"
@@ -15,7 +16,12 @@
 #include <memory>
 #include <cassert>
 
-template <class bp_index_vector_type, class bp_vector_type, class aux_index_vector_type, class aux_vector_type> class dna_database {
+template <class traits> class dna_database {
+  typedef typename traits::bp_index_vector_type bp_index_vector_type;
+  typedef typename traits::bp_vector_type bp_vector_type;
+  typedef typename traits::aux_index_vector_type aux_index_vector_type;
+  typedef typename traits::aux_vector_type aux_vector_type;
+  
   bp_index_vector_type bp_index;
   bp_vector_type bp;
   aux_index_vector_type aux_index;
@@ -94,8 +100,7 @@ public:
   }
 
   template <class _Write> bool write(_Write &w) const {
-    static const char sig[32] = "dna_database v1.0\n\x1a\x04";
-    w.write(sig, sizeof(sig));
+    w.write(traits::sig(), 32);
 
     size_t bp_index_size = bp_index.size();
     size_t bp_size = bp.size();
@@ -116,7 +121,7 @@ public:
   template <class _Read> bool read(_Read &r) {
     char sig[32];
     r.read(sig, sizeof(sig));
-    if (strcmp(sig, "dna_database v1.0\n\x1a\x04")) {
+    if (strcmp(sig, traits::sig())) {
       return false;
     }
 
@@ -589,6 +594,35 @@ public:
     }
   }
 };
+
+struct dna_database_def_traits {
+  typedef std::vector<uint32_t> bp_index_vector_type;
+  typedef std::vector<uint64_t> bp_vector_type;
+  typedef std::vector<uint32_t> aux_index_vector_type;
+  typedef std::vector<uint8_t> aux_vector_type;
+
+  static const char *sig() {
+    static const char value[32] = "dna_database_def v1.0\n\x1a\x04";
+    return value;
+  }
+};
+
+struct dna_database_large_traits {
+  typedef std::vector<uint64_t> bp_index_vector_type;
+  typedef std::vector<uint64_t> bp_vector_type;
+  typedef std::vector<uint32_t> aux_index_vector_type;
+  typedef std::vector<uint8_t> aux_vector_type;
+
+  static const char *sig() {
+    static const char value[32] = "dna_database_large v1.0\n\x1a\x04";
+    return value;
+  }
+};
+
+// todo: mappable version.
+
+typedef dna_database<dna_database_def_traits> dna_database_def;
+typedef dna_database<dna_database_large_traits> dna_database_large;
 
 #endif
 

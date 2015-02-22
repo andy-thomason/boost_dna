@@ -2,6 +2,7 @@
 #ifndef _SUFFIX_ARRAY_H_
 #define _SUFFIX_ARRAY_H_
 
+#include "utils.h"
 #include "seed.h"
 #include "locus.h"
 #include "find_result.h"
@@ -25,32 +26,13 @@
 
 #include "mapped_vector.h"
 
-template <class _Fn> static void par_for(int limit, _Fn f) {
-  std::vector<std::future<bool>> threads(std::thread::hardware_concurrency());
-  //std::vector<std::future<bool>> threads(1);
-
-  std::atomic<int> sequence;
-  for (auto &t : threads) {
-    t = std::async([&](){
-      int seq;
-      while ((seq = sequence++) < limit) {
-        f(seq);
-      }
-      return true;
-    });
-  }
-
-  for (auto &t : threads) {
-    t.get();
-  }
-}
-
-template <class index_vector_type, class address_vector_type> class suffix_array {
-  index_vector_type index;
-  address_vector_type address;
+template <class traits> class suffix_array {
+public:
+  typedef typename traits::index_vector_type index_vector_type;
+  typedef typename traits::address_vector_type address_vector_type;
   typedef typename index_vector_type::value_type index_type;
   typedef typename address_vector_type::value_type address_type;
-public:
+
   suffix_array() {
   }
 
@@ -287,8 +269,7 @@ public:
   }
 
   template <class _Writeable> bool write(_Writeable &w) const {
-    static const char sig[32] = "suffix_array v1.0\n\x1a\x04";
-    w.write(sig, sizeof(sig));
+    w.write(traits::sig(), 32);
 
     size_t index_size = index.size();
     size_t address_size = address.size();
@@ -321,7 +302,23 @@ public:
     r.read((char*)address.data(), address.size() * sizeof(address_type));
     return !r.fail();
   }
+
+private:
+  index_vector_type index;
+  address_vector_type address;
 };
+
+struct suffix_array_def_traits {
+  typedef std::vector<uint32_t> index_vector_type;
+  typedef std::vector<uint32_t> address_vector_type;
+
+  static const char *sig() {
+    static const char value[32] = "suffix_array v1.0\n\x1a\x04";
+    return value;
+  }
+};
+
+typedef suffix_array<suffix_array_def_traits> suffix_array_def;
 
 #endif
 
