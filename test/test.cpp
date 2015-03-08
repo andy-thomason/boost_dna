@@ -216,15 +216,25 @@ void test_one(const char *dna_file, const char *suffix_file, const char *sequenc
 
   std::vector<find_result> results;
   long long t1 = __rdtsc();
-  dna.find(results, sequence, max_distance, 0);
+  //dna.find(results, sequence, max_distance, 0);
   long long t2 = __rdtsc();
   for (auto &r : results) {
     std::cout << r << "\n";
   }
 
-  suffix_array_def suf;
-  suf.read(std::ifstream(suffix_file, std::ios_base::binary));
-  //suf.verify(dna);
+  boost::interprocess::file_mapping mapping(suffix_file, boost::interprocess::read_only);
+  boost::interprocess::mapped_region region(mapping, boost::interprocess::read_only, 0, 0);
+  const char *begin = (const char*)region.get_address();
+  const char *end = begin + region.get_size();
+
+  suffix_array_mapped suf;
+  suf.map(begin, end);
+
+  if (0) {
+    std::cout << "verifying\n";
+    bool res = suf.verify(dna);
+    std::cout << "verified" << res << "\n";
+  }
 
   std::cout << t2-t1 << "\n";
 
@@ -238,11 +248,74 @@ void test_one(const char *dna_file, const char *suffix_file, const char *sequenc
   std::cout << t4-t3 << "\n";
 }
 
+class allocator_base {
+public:
+};
+
+#define noexcept
+template <class T> class allocator {
+public:
+  typedef size_t size_type;
+  typedef ptrdiff_t difference_type;
+  typedef T* pointer;
+  typedef const T* const_pointer;
+  typedef T& reference;
+  typedef const T& const_reference;
+  typedef T value_type;
+  template <class U> struct rebind { typedef allocator<U> other; };
+
+  allocator(allocator_base *base = nullptr) noexcept : base(base) {}
+  allocator(const allocator&x) noexcept { base = x.base; }
+  template <class U> allocator(const allocator<U> &x) noexcept { base = x.base; }
+  ~allocator() {}
+  pointer address(reference x) const noexcept { return &x; }
+  const_pointer address(const_reference x) const noexcept { return &x; }
+  pointer allocate(size_type count, allocator<void>::const_pointer hint = 0) { return (pointer)malloc(count * sizeof(T)); }
+  void deallocate(pointer p, size_type n) noexcept { free((void*)p); }
+  size_type max_size() const noexcept { return 0xffffffff; }
+  template<class U, class... Args> void construct(U* p, Args&&... args) { new ((void*)p)U(args...); }
+  template <class U> void destroy(U* p) { p->~U(); }
+
+  allocator_base *base;
+};
+#undef noexcept
+
+template <> struct allocator<void> {
+  typedef void* pointer;
+  typedef const void* const_pointer;
+};
+
+void test_vector() {
+  //std::vector<uint64_t> allocated(256);
+  //allocator<int>{}
+  //std::vector<int, allocator<int>> mv();
+
+
+
+}
+
+template <class _FwdIter, class _OutTy> void make_suffix_array(_FwdIter begin, _FwdIter end, _OutTy dest) {
+  typedef decltype(*begin) value_type;
+  typedef decltype(*dest) index_type;
+  std::iota(dest, dest + ((end - begin) + 1), 0);
+}
+
+void test_suffix_array() {
+  std::string test = "abracadabra";
+  std::vector<std::uint8_t> sa(test.size() + 1);
+  make_suffix_array(test.begin(), test.end(), sa.begin());
+}
+
+
 int main() {
+
   try {
+    test_suffix_array();
+    //make_from_file("C:/projects/test/Homo_sapiens.GRCh38.dna.primary_assembly.fa", "GRCh38.dna", "GRCh38.suf");
     //make_from_file("C:/projects/test/chr21_p1.fa", "chr21.dna", "chr21.suf");
 
-    test_one("chr21.dna", "chr21.suf", "CCAATGCCTAGGGAGATTTCTAGGTCCTCTGTTCCTTGCTGACCTCCAAT", 3);
+    //test_one("chr21.dna", "chr21.suf", "CCAATGCCTAGGGAGATTTCTAGGTCCTCTGTTCCTTGCTGACCTCCAAT", 3);
+    //test_one("GRCh38.dna", "GRCh38.suf", "CCAATGCCTAGGGAGATTTCTAGGTCCTCTGTTCCTTGCTGACCTCCAAT", 3);
     //test_file();
     //test_ref();
     std::cout << "Passed:\n";

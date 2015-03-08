@@ -82,8 +82,8 @@ find_inexact(char* cpp_sa, char* pattern, int maxmismatch, int limit)
 
 BOOST_PYTHON_MODULE(suffix_array)
 {
-    using namespace boost::python;
-    def("build", build);
-    def("find_inexact", find_inexact);
+  using namespace boost::python;
+  def("build", build);
+  def("find_inexact", find_inexact);
 }
 

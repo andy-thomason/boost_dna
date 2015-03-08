@@ -5,7 +5,10 @@
 #include "utils.h"
 #include "seed.h"
 #include "locus.h"
+#include "mapped_vector.h"
 #include "find_result.h"
+
+#include <intrin.h>
 
 #include <vector>
 #include <cstdint>
@@ -139,18 +142,25 @@ public:
   template <class _Dna> bool verify(_Dna &dna) const {
     if (index.size() == 0) return false;
 
+    int lg_index_size = (int)std::log2((int)index.size());
     const uint64_t *bp = dna.bp_data();
     size_t imax = index.size() - 1;
+    int sh = 64 - lg_index_size;
+    //std::ofstream os("dbg.txt");
     for (size_t i = 0; i != imax; ++i) {
       index_type begin = index[i];
       index_type end = index[i+1];
+      if (i%0x10000 == 0) std::cerr << hex(i) << "\n";
       for (index_type j = begin; j != end; ++j) {
         address_type addr = address[j];
         seed64_t seed(bp, addr);
-        std::cout << seed << "\n";
+        if ((seed.value() >> sh) != i) {
+          std::cerr << hex(seed.value()) << " " << hex(i) << hex(seed.value() >> sh) << "\n";
+          return false;
+        }
       }
     }
-    return false;
+    return true;
   }
 
   void operator=(suffix_array &rhs) = delete;
@@ -248,7 +258,7 @@ public:
         std::string short_name;
         dna.get_short_name(short_name, index);
         result.push_back(find_result{*p, text, errors, short_name, (uint64_t)(*p - start + 1)});
-        if (max_results && loci.size() > max_results) {
+        if (max_results && loci.size() > (size_t)max_results) {
           return false;
         }
       }
@@ -303,6 +313,28 @@ public:
     return !r.fail();
   }
 
+  template <class _Iter> bool map(_Iter begin, _Iter end) {
+    _Iter src = begin;
+
+    char sig[32];
+    std::copy(src, src + 32, sig);
+    src += 32;
+    if (strcmp(sig, "suffix_array v1.0\n\x1a\x04")) {
+      return false;
+    }
+
+    const size_t &index_size = *(const size_t *)src;
+    src += sizeof(size_t);
+    const size_t &address_size = *(const size_t *)src;
+    src += sizeof(size_t);
+
+    index.map(index_size, src);
+    src += index_size * sizeof(index_type);
+    address.map(address_size, src);
+    src += address_size * sizeof(address_type);
+    return src == end;
+  }
+
 private:
   index_vector_type index;
   address_vector_type address;
@@ -318,7 +350,37 @@ struct suffix_array_def_traits {
   }
 };
 
+template <class _Ty> struct my_allocator : public allocator_base {
+	typedef typename _Ty value_type;
+
+	typedef value_type *pointer;
+	typedef const value_type *const_pointer;
+	typedef void *void_pointer;
+	typedef const void *const_void_pointer;
+
+	typedef value_type& reference;
+	typedef const value_type& const_reference;
+
+	typedef size_t size_type;
+	typedef ptrdiff_t difference_type;
+
+	void deallocate(pointer _Ptr, size_type) {
+    std::cout << "deallocate\n";
+  }
+
+	pointer allocate(size_type _Count) {
+    std::cout << "allocate\n";
+    return (pointer)malloc(_Count * sizeof(_Ty));
+  }
+};
+
+struct suffix_array_mapped_traits : public suffix_array_def_traits {
+  typedef mapped_vector<uint32_t> index_vector_type;
+  typedef mapped_vector<uint32_t> address_vector_type;
+};
+
 typedef suffix_array<suffix_array_def_traits> suffix_array_def;
+typedef suffix_array<suffix_array_mapped_traits> suffix_array_mapped;
 
 #endif
 
