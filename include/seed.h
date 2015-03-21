@@ -37,7 +37,12 @@ public:
   seed(const uint64_t *bp, uint64_t offset) {
     uint64_t sh = ((offset%32)*2);
     size_t idx = offset / 32;
-    value_ = (bp[idx] << sh) | (bp[idx+1] >> (64-sh));
+    value_ = (bp[idx] << sh);
+    if (sh) value_ |= (bp[idx+1] >> (64-sh));
+  }
+
+  seed lower(int seed_size) const {
+    return seed(value_ & ~(~(value_type)0 >> (seed_size*2)));
   }
 
   seed upper(int seed_size) const {
@@ -57,8 +62,17 @@ public:
   //! Code distance to another seed.
   int distance(const seed &rhs) const {
     value_type x = value_ ^ rhs.value_;
-    x = (x & 0x5555555555555555) | ((x >> 1) & 0x5555555555555555);
-    return __popcnt64(x);
+    x |= x >> 1;
+    x &= 0x5555555555555555;
+    return (int)__popcnt64(x);
+  }
+
+  //! Code distance to another short seed
+  int distance(const seed &rhs, uint64_t mask) const {
+    value_type x = (value_ ^ rhs.value_) & mask;
+    x |= x >> 1;
+    x &= 0x5555555555555555;
+    return (int)__popcnt64(x);
   }
 
 private:

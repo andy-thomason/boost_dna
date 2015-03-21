@@ -32,6 +32,13 @@
 # PyCharm Garbage
 .idea
 
+# misc
+.pyc
+.exp
+build/python/x64/
+build/python/Debug/
+
+
 test_bin
 
 suffix_array.egg-info
