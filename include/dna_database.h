@@ -2,11 +2,8 @@
 #ifndef _DNA_DATABASE_H_
 #define _DNA_DATABASE_H_
 
-#include "utils.h"
-#include "seed.h"
-#include "locus.h"
-#include "find_result.h"
-
+#include <future>
+#include <atomic>
 #include <vector>
 #include <cstdint>
 #include <string>
@@ -16,12 +13,17 @@
 #include <memory>
 #include <cassert>
 
+#include "utils.h"
+#include "seed.h"
+#include "locus.h"
+#include "find_result.h"
+
 template <class traits> class dna_database {
   typedef typename traits::bp_index_vector_type bp_index_vector_type;
   typedef typename traits::bp_vector_type bp_vector_type;
   typedef typename traits::aux_index_vector_type aux_index_vector_type;
   typedef typename traits::aux_vector_type aux_vector_type;
-  
+
   bp_index_vector_type bp_index;
   bp_vector_type bp;
   aux_index_vector_type aux_index;
@@ -78,26 +80,26 @@ public:
     item_index_t index;
   };
 
-  class iterator : public item {
-  public:
-    iterator(const dna_database *ptr, item_index_t index) : item(ptr, index) {
-    }
-
-    iterator &operator++() { index++; return *this; }
-    iterator &operator++(int) { ++index; return *this; }
-    bool operator!=(const iterator &rhs) { return index != rhs.index; }
-
-    const item &operator *() const { return *this; }
-    const item *operator->() const { return this; }
-  };
-
-  iterator begin() const {
-    return iterator(this, 0);
-  }
-
-  iterator end() const {
-    return iterator(this, size());
-  }
+//  class iterator : public item {
+//  public:
+//    iterator(const dna_database *ptr, item_index_t index) : item(ptr, index) {
+//    }
+//
+//    iterator &operator++() { index++; return *this; }
+//    iterator &operator++(int) { ++index; return *this; }
+//    bool operator!=(const iterator &rhs) { return index != rhs.index; }
+//
+//    const item &operator *() const { return *this; }
+//    const item *operator->() const { return this; }
+//  };
+//
+//  iterator begin() const {
+//    return iterator(this, 0);
+//  }
+//
+//  iterator end() const {
+//    return iterator(this, size());
+//  }
 
   template <class _Write> bool write(_Write &w) const {
     w.write(traits::sig(), 32);
@@ -557,7 +559,7 @@ public:
     return p;
   }
 
-  template<class _Dna> void add_fastq(_Dna *dna, const char * begin, const char * end) {
+/*  template<class _Dna> void add_fastq(_Dna *dna, const char * begin, const char * end) {
     const char *p = begin;
     while (p != end) {
       dna->begin_section();
@@ -592,7 +594,7 @@ public:
       while (p != end && (*p == '\n' || *p == '\r')) ++p;
       dna->end_section();
     }
-  }
+  }*/
 };
 
 struct dna_database_def_traits {

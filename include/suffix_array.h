@@ -29,6 +29,8 @@
 
 #include "mapped_vector.h"
 
+long long __rdtsc(){return 0;};
+
 template <class traits> class suffix_array {
 public:
   typedef typename traits::index_vector_type index_vector_type;
@@ -40,7 +42,7 @@ public:
   }
 
   template <class _Dna> suffix_array(_Dna &dna, int lg_index_size) {
-    index.resize(((size_t)1 << lg_index_size)+1);
+    this->index.resize(((size_t)1 << lg_index_size)+1);
 
     enum { lg_num_seqs = 5 };
     enum { num_seqs = 1 << lg_num_seqs };
@@ -65,7 +67,7 @@ public:
 
     const uint64_t *bp = dna.bp_data();
 
-    address.resize(std::accumulate(std::begin(counts), std::end(counts), (size_t)0));
+    this->address.resize(std::accumulate(std::begin(counts), std::end(counts), (size_t)0));
     size_t starts[num_seqs];
     std::partial_sum(std::begin(counts), std::end(counts), starts);
 
@@ -81,8 +83,9 @@ public:
          // _mm_stream_si64((int64_t*)&this->val, (seed >> (32-lg_num_seqs) << 32) | (offset & 0xffffffff));
         //replace with gnu friendly store
           val = seed >> (32-lg_num_seqs) << 32) | (offset & 0xffffffff);
+
         }
-        bool operator<(sort_t rhs) { return val < rhs.val; }
+        bool operator<(struct sort_t &rhs) { return val < rhs.val; }
       };
       //typedef std::pair<uint32_t, _Dna::bp_index_type> sort_t;
       //long long t1 = __rdtsc();
@@ -352,7 +355,7 @@ struct suffix_array_def_traits {
   }
 };
 
-template <class _Ty> struct my_allocator : public allocator_base {
+/*template <class _Ty> struct my_allocator : public allocator_base {
 	typedef typename _Ty value_type;
 
 	typedef value_type *pointer;
@@ -374,7 +377,7 @@ template <class _Ty> struct my_allocator : public allocator_base {
     std::cout << "allocate\n";
     return (pointer)malloc(_Count * sizeof(_Ty));
   }
-};
+};*/
 
 struct suffix_array_mapped_traits : public suffix_array_def_traits {
   typedef mapped_vector<uint32_t> index_vector_type;
