@@ -1,6 +1,7 @@
 
 #include <cstdint>
 #include <fstream>
+#include <future>
 
 #define HAVE_ROUND
 #include <boost/python.hpp> //relative to ENV system import path

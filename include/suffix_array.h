@@ -8,7 +8,7 @@
 #include "mapped_vector.h"
 #include "find_result.h"
 
-#include <intrin.h>
+//#include <intrin.h>
 
 #include <vector>
 #include <cstdint>
@@ -78,15 +78,17 @@ public:
         sort_t() {
         }
         sort_t(uint64_t seed, uint64_t offset) {
-          _mm_stream_si64((int64_t*)&this->val, (seed >> (32-lg_num_seqs) << 32) | (offset & 0xffffffff));
+         // _mm_stream_si64((int64_t*)&this->val, (seed >> (32-lg_num_seqs) << 32) | (offset & 0xffffffff));
+        //replace with gnu friendly store
+          val = seed >> (32-lg_num_seqs) << 32) | (offset & 0xffffffff);
         }
         bool operator<(sort_t rhs) { return val < rhs.val; }
       };
       //typedef std::pair<uint32_t, _Dna::bp_index_type> sort_t;
-      long long t1 = __rdtsc();
+      //long long t1 = __rdtsc();
       sort_t *sorter = new sort_t[counts[seq]];
       size_t sorter_size = counts[seq];
-      long long t2 = __rdtsc();
+      //long long t2 = __rdtsc();
       sort_t *last = dna.copy_if(
         sorter, sorter + sorter_size,
         [=](seed64_t seed) {
@@ -97,10 +99,10 @@ public:
       printf("%lld %lld\n", last - sorter, sorter_size);
       assert(last - sorter == sorter_size);
 
-      long long t3 = __rdtsc();
+      //long long t3 = __rdtsc();
       std::sort(sorter, sorter + sorter_size);
 
-      long long t4 = __rdtsc();
+      //long long t4 = __rdtsc();
       size_t addr_idx = seq == 0 ? (size_t)0 : starts[seq-1];
       size_t first_idx_idx = (size_t)seq << (lg_index_size - lg_num_seqs);
       size_t last_idx_idx = (size_t)(seq+1) << (lg_index_size - lg_num_seqs);
@@ -123,7 +125,7 @@ public:
       while (idx_idx < last_idx_idx) {
         index[idx_idx++] = (uint32_t)addr_idx;
       }
-      long long t5 = __rdtsc();
+      //long long t5 = __rdtsc();
       printf("%lld %lld %lld %lld\n", t2-t1, t3-t2, t4-t3, t5-t4);
       delete [] sorter;
     });
@@ -219,7 +221,7 @@ public:
     result.resize(0);
     int seq_size = (int)sequence.size();
 
-    long long t1 = __rdtsc();
+    //long long t1 = __rdtsc();
 
     // AAAAXAAAAA (10-1)/(1+1) = 4
     // AAXAAAXAAA (10-2)/(2+1) = 2
@@ -240,11 +242,11 @@ public:
       }
     }
 
-    long long t2 = __rdtsc();
+    //long long t2 = __rdtsc();
 
     std::sort(loci.begin(), loci.end());
 
-    long long t3 = __rdtsc();
+    //long long t3 = __rdtsc();
 
     std::string text;
     for (auto p = loci.begin(); p != loci.end(); ) {
@@ -267,7 +269,7 @@ public:
       p = q;
     }
 
-    long long t4 = __rdtsc();
+    //long long t4 = __rdtsc();
 
     std::cout << t2-t1 << " " << t3-t2 << " " << t4-t3 << "\n";
     return true;
